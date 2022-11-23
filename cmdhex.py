@@ -1,8 +1,14 @@
 import curses
 import os
 import sys
+import argparse
 
-if len(sys.argv) < 2: exit()
+p = argparse.ArgumentParser()
+p.add_argument("filename")
+p.add_argument("-f", "--in-format", dest="format", choices=["bin", "hex"], default="bin")
+p.add_argument("-o", "--out-format", dest="out", choices=["bin", "hex"])
+args = p.parse_args()
+
 
 cursor = 0
 mode = ""
@@ -11,9 +17,28 @@ buf = ""
 voffs = 0
 LINES = COLS = 0
 asc = False
-with open(sys.argv[1], "rb") as f:
-    data = bytearray(f.read())
 
+if args.format == "bin":
+    with open(args.filename, "rb") as f:
+        data = bytearray(f.read())
+elif args.format == "hex":
+    data = bytearray()
+    with open(args.filename) as f:
+        cont = f.read().split(":")
+        for r in cont[1:]:
+            r = r.strip()
+            size = int(r[0:2], 16)
+            addr = int(r[2:6], 16)
+            t = int(r[6:8], 16)
+            seg = bytearray(int(r[8+i*2:10+i*2], 16) for i in range(size))
+            if t == 0:
+                if addr == len(data): data += seg
+                elif addr > len(data): data += bytearray([0]*(addr - len(data))) + seg
+            elif t == 1:
+                break
+            
+
+out_format = args.out or args.format
 
 def update_cursor(stdscr):
     global cursor
@@ -38,6 +63,13 @@ def refresh_page(stdscr):
     stdscr.refresh()
 
 
+def gensum(s):
+    return s+bytearray([(256-(sum(s)&255))&255])
+
+def tohex(s, sp=0):
+    return (" "*sp).join(hex(r)[2:].rjust(2, '0') for r in s)
+
+
 def main(stdscr):
     global mode, cursor, data, nibble, buf, LINES, COLS, asc
     stdscr.clear()
@@ -52,7 +84,15 @@ def main(stdscr):
         if buf:
             if k == ord("\n"):
                 if "w" in buf:
-                    with open(sys.argv[1], "wb") as f: f.write(data)
+                    if out_format == "bin":
+                        with open(args.filename, "wb") as f: f.write(data)
+                    if out_format == "hex":
+                        with open(args.filename, "w") as f:
+                            f.write(":"+tohex(gensum(b"\x02\x00\x00\x02\x00\x00"))+"\n")
+                            for i in range(0, len(data), 16):
+                                n = min(16, len(data) - i)
+                                f.write(":" + tohex(gensum(bytearray([n, i>>8, i&255, 0])+data[i:i+n]))+"\n")
+                            f.write(":00000001FF\n")
                 if "q" in buf: break
                 buf = ""
             elif k == 27:
