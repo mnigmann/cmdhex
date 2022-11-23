@@ -5,8 +5,8 @@ import argparse
 
 p = argparse.ArgumentParser()
 p.add_argument("filename")
-p.add_argument("-f", "--in-format", dest="format", choices=["bin", "hex"], default="bin")
-p.add_argument("-o", "--out-format", dest="out", choices=["bin", "hex"])
+p.add_argument("-f", "--in-format", dest="format", choices=["bin", "hex"], default="bin", help="Format of the file being read")
+p.add_argument("-o", "--out-format", dest="out", choices=["bin", "hex"], help="Format to use when writing to the file. If unspecified, the input and output formats are assumed to match")
 args = p.parse_args()
 
 
