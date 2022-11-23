@@ -22,9 +22,9 @@ optional arguments:
   * __Escape__: Exit edit mode
 
 ### When not in edit mode:
-  * __i__: Enter edit mode, where new bytes are inserted into the file (like insert mode in vim)
-  * __R__: Enter edit mode, where new bytes replace existing bytes (linek replace mode in vim)
-  * __Tab__: Toggle between hexadecimal and ASCII modes (only when not in edit mode)
+  * `i`: Enter edit mode, where new bytes are inserted into the file (like insert mode in vim)
+  * `R`: Enter edit mode, where new bytes replace existing bytes (like replace mode in vim)
+  * __Tab__: Toggle between hexadecimal and ASCII modes
   * `:q`: Exit the editor
   * `:w`: Save the file
   * `:wq`: Save and exit
