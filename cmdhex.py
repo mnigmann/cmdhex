@@ -2,10 +2,11 @@ import curses
 import os
 import sys
 import argparse
+from os.path import splitext
 
 p = argparse.ArgumentParser()
 p.add_argument("filename")
-p.add_argument("-f", "--in-format", dest="format", choices=["bin", "hex"], default="bin", help="Format of the file being read")
+p.add_argument("-f", "--in-format", dest="format", choices=["bin", "hex"], default=None, help="Format of the file being read")
 p.add_argument("-o", "--out-format", dest="out", choices=["bin", "hex"], help="Format to use when writing to the file. If unspecified, the input and output formats are assumed to match")
 args = p.parse_args()
 
@@ -18,10 +19,15 @@ voffs = 0
 LINES = COLS = 0
 asc = False
 
-if args.format == "bin":
+if args.format is None:
+    file_format = "hex" if splitext(args.filename)[1] in [".hex", ".ihex"] else "bin"
+else:
+    file_format = args.format
+
+if file_format == "bin":
     with open(args.filename, "rb") as f:
         data = bytearray(f.read())
-elif args.format == "hex":
+elif file_format == "hex":
     data = bytearray()
     with open(args.filename) as f:
         cont = f.read().split(":")
@@ -38,7 +44,7 @@ elif args.format == "hex":
                 break
             
 
-out_format = args.out or args.format
+out_format = args.out or file_format
 
 def update_cursor(stdscr):
     global cursor
@@ -145,7 +151,11 @@ def main(stdscr):
         elif k == curses.KEY_UP:
             cursor -= 16
             refresh_page(stdscr)
-        if k > 255 or k < 0: continue
+        elif k == 127 or k == curses.KEY_BACKSPACE:
+            cursor -= 1
+            del data[cursor]
+            refresh_page(stdscr)
+        elif k < 0: continue
         elif chr(k) in "0123456789abcdefABCDEF" and mode and mode in "iR" and not asc:
             if nibble == 0 and mode == "i":
                 data.insert(cursor, 0)
@@ -154,10 +164,6 @@ def main(stdscr):
                 cursor += 1
             refresh_page(stdscr)
             nibble = 1 - nibble
-        elif k == 127:
-            cursor -= 1
-            del data[cursor]
-            refresh_page(stdscr)
         elif mode and mode in "iR" and asc:
             if mode == "i": data.insert(cursor, k)
             elif cursor < len(data)-1: data[cursor] = k
