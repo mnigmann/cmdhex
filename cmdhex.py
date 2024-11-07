@@ -64,7 +64,7 @@ def refresh_page(stdscr):
         x = r - 1 + voffs
         n = min(16, len(data) - x*16)
         if n < 0: stdscr.addstr(r, 0, " "*(COLS-1))
-        else: stdscr.addstr(r, 0, hex(16*x)[2:].rjust(8, '0') + "  " + " ".join(hex(data[i])[2:].rjust(2, "0") for i in range(16*x, 16*x+n)).ljust(48, " ") + ("  |"+"".join(chr(x) if x >= 32 else '.' for x in data[16*x:16*x+n])+"|").ljust(20, " "))
+        else: stdscr.addstr(r, 0, hex(16*x)[2:].rjust(8, '0') + "  " + " ".join(hex(data[i])[2:].rjust(2, "0") for i in range(16*x, 16*x+n)).ljust(48, " ") + ("  |"+"".join(chr(x) if (127 > x >= 32 or x >= 0xAD) else '.' for x in data[16*x:16*x+n])+"|").ljust(20, " "))
     update_cursor(stdscr)
     stdscr.refresh()
 
@@ -89,17 +89,21 @@ def main(stdscr):
             continue
         if buf:
             if k == ord("\n"):
-                if "w" in buf:
-                    if out_format == "bin":
-                        with open(args.filename, "wb") as f: f.write(data)
-                    if out_format == "hex":
-                        with open(args.filename, "w") as f:
-                            f.write(":"+tohex(gensum(b"\x02\x00\x00\x02\x00\x00"))+"\n")
-                            for i in range(0, len(data), 16):
-                                n = min(16, len(data) - i)
-                                f.write(":" + tohex(gensum(bytearray([n, i>>8, i&255, 0])+data[i:i+n]))+"\n")
-                            f.write(":00000001FF\n")
-                if "q" in buf: break
+                if buf.startswith(":0x"):
+                    cursor = int(buf[3:], 16)
+                    refresh_page(stdscr)
+                else:
+                    if "w" in buf:
+                        if out_format == "bin":
+                            with open(args.filename, "wb") as f: f.write(data)
+                        if out_format == "hex":
+                            with open(args.filename, "w") as f:
+                                f.write(":"+tohex(gensum(b"\x02\x00\x00\x02\x00\x00"))+"\n")
+                                for i in range(0, len(data), 16):
+                                    n = min(16, len(data) - i)
+                                    f.write(":" + tohex(gensum(bytearray([n, i>>8, i&255, 0])+data[i:i+n]))+"\n")
+                                f.write(":00000001FF\n")
+                    if "q" in buf: break
                 buf = ""
             elif k == 27:
                 stdscr.addstr(LINES-1, 0, " "*(COLS-1))
@@ -139,6 +143,12 @@ def main(stdscr):
             elif k == ord("\t"):
                 asc = not asc
                 update_cursor(stdscr)
+            elif k == ord("g"):
+                cursor = 0
+                refresh_page(stdscr)
+            elif k == ord("G"):
+                cursor = len(data)-1
+                refresh_page(stdscr)
         if k == curses.KEY_RIGHT:
             cursor += 1
             refresh_page(stdscr)
@@ -150,6 +160,12 @@ def main(stdscr):
             refresh_page(stdscr)
         elif k == curses.KEY_UP:
             cursor -= 16
+            refresh_page(stdscr)
+        elif k == curses.KEY_NPAGE:
+            cursor += 16*(LINES-2)
+            refresh_page(stdscr)
+        elif k == curses.KEY_PPAGE:
+            cursor -= 16*(LINES-2)
             refresh_page(stdscr)
         elif k == 127 or k == curses.KEY_BACKSPACE:
             cursor -= 1
