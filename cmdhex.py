@@ -171,6 +171,19 @@ def main(stdscr):
             cursor -= 1
             del data[cursor]
             refresh_page(stdscr)
+        elif k == ord("z"):
+            for i in range(cursor, len(data)):
+                if data[i] != 0:
+                    cursor = i
+                    refresh_page(stdscr)
+                    break
+        elif k == ord("Z"):
+            for i in range(cursor, -1, -1):
+                if data[i] != 0:
+                    cursor = i
+                    refresh_page(stdscr)
+                    break
+
         elif k < 0: continue
         elif chr(k) in "0123456789abcdefABCDEF" and mode and mode in "iR" and not asc:
             if nibble == 0 and mode == "i":
